@@ -4,9 +4,9 @@
 #include <time.h>
 
 typedef struct {
-    double W1[2][2]; //Weight from input i to hidden j
-    double b1[2]; // Biases for hidden layer
-    double W2[2]; // Hidden to Output weights
+    double W1[2][4]; //Weight from input i to hidden j
+    double b1[4]; // Biases for hidden layer
+    double W2[4]; // Hidden to Output weights
     double b2; //Output Bias
 } Network;
 
@@ -23,37 +23,41 @@ double rand_weight() {
     return ((double)rand() / RAND_MAX) * 2.0 - 1.0; // range [-1, 1]
 }
 
-void forward_pass(Network* net, double x1, double x2, double h[2], double* out) {
+void forward_pass(Network* net, double x1, double x2, double h[4], double* out) {
     // Layer 1: input -> hidden
-    for (int i=0; i<2; i++) {
+    for (int i=0; i<4; i++) {
         double z = x1 * net->W1[0][i] + x2 * net->W1[1][i] + net->b1[i];
         h[i] = sigmoid(z);
     }
 
     // Layer 2: Hidden -> Output
-    double z_out = h[0] * net->W2[0] + h[1] * net->W2[1] + net->b2;
+    double z_out = 0.0;
+    for (int i=0; i<4; i++) {
+        z_out += h[i] * net->W2[i];
+    }
+    z_out += net->b2;
     *out = sigmoid(z_out);
 }
 
-void backward(Network* net, double x1, double x2, double h[2], double out, double target, double learning_rate) {
+void backward(Network* net, double x1, double x2, double h[4], double out, double target, double learning_rate) {
     // 1. Output layer error and delta
     double error = target - out;
     double delta_out = error * sigmoid_derivative(out);
 
     // 2. Hidden layer deltas (error propagated backward through W2)
-    double delta_h[2];
-    for (int j = 0; j<2; j++) {
+    double delta_h[4];
+    for (int j = 0; j<4; j++) {
         delta_h[j] = delta_out * net->W2[j] * sigmoid_derivative(h[j]);
     }
 
     // 3. Update output layer weights + bias
-    for (int i=0; i<2; i++) {
+    for (int i=0; i<4; i++) {
         net->W2[i] += learning_rate * delta_out * h[i];
     }
     net->b2 += learning_rate * delta_out;
 
     // 4. Update hidden layer weights + bias
-    for (int i=0; i<2; i++) {
+    for (int i=0; i<4; i++) {
         net->W1[0][i] += learning_rate * delta_h[i] * x1;
         net->W1[1][i] += learning_rate * delta_h[i] * x2;
         net->b1[i] += learning_rate * delta_h[i];
@@ -61,7 +65,7 @@ void backward(Network* net, double x1, double x2, double h[2], double out, doubl
 }
 
 void train_step(Network* net, double x1, double x2, double target, double learning_rate) {
-    double h[2], out;
+    double h[4], out;
     forward_pass(net, x1, x2, h, &out);
     backward(net, x1, x2, h, out, target, learning_rate);
 }
@@ -77,7 +81,7 @@ int main(void) {
 
     //intialise neural network
     Network net;
-    for (int i=0; i<2; i++) {
+    for (int i=0; i<4; i++) {
         net.W1[0][i] = rand_weight();
         net.W1[1][i] = rand_weight();
         net.W2[i] = rand_weight();
@@ -91,7 +95,7 @@ int main(void) {
     }
     printf("\n--- Testing Trained Network ---\n");
     for (int i=0; i<4; i++) {
-        double h[2], out;
+        double h[4], out;
         forward_pass(&net, inputs[i][0], inputs[i][1], h, &out);
 
         printf("Input: (%.0f, %.0f) -> Predicted: %.4f | Target: %.0f\n", inputs[i][0], inputs[i][1], out, targets[i]);
