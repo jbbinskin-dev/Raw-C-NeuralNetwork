@@ -136,6 +136,16 @@ void train_step(Network* net, double x1, double x2, double target, double learni
  * for each XOR input compared to its expected output.
  */
 int main(void) {
+
+    FILE* fp = fopen("errordata.csv", "w");
+
+    // Check if the file opened successfully
+    if (fp == NULL) {
+        printf("Error opening file!\n");
+        return 1;
+    }
+
+    fprintf(fp, "Target 1,Target 2,Target 3,Target 4\n");
     //Initialise random, inputs and target outputs
     srand(time(NULL));
     double inputs[4][2] = {{0,0},
@@ -144,6 +154,7 @@ int main(void) {
                         {1,1}};
     double targets[4] = {0, 1, 1, 0};
     int epochs = 10000; //set epochs
+    double error[4];
 
     //intialise neural network
     Network net;
@@ -158,6 +169,16 @@ int main(void) {
     for(int i=0; i<epochs; i++) {
         for(int j=0; j<4;j++) {
             train_step(&net, inputs[j][0], inputs[j][1], targets[j], 0.1);
+
+            if (i % 499 == 0) {
+                double h[4], out;
+                forward_pass(&net, inputs[j][0], inputs[j][1], h, &out);
+                error[j] = targets[j] - out;
+                error[j] = error[j] * error[j];
+            }
+        }
+        if (i % 499 == 0) {
+            fprintf(fp, "%.4f,%.4f,%.4f,%.4f\n", error[0], error[1], error[2], error[3]);
         }
     }
     //Print results
@@ -168,5 +189,6 @@ int main(void) {
 
         printf("Input: (%.0f, %.0f) -> Predicted: %.4f | Target: %.0f\n", inputs[i][0], inputs[i][1], out, targets[i]);
     }
+    fclose(fp);
     return 0;
 }
